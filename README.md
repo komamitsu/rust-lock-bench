@@ -5,6 +5,6 @@ Benchmark of Mutex and RwLock in Rust
 ## Usage
 
 ```
-$ cargo run
+$ cargo run --release
 ```
 

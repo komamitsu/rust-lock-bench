@@ -28,16 +28,19 @@ pub fn iter(num_reader: i32, num_writer: i32) {
 
     let mut bm_mutex = Vec::new();
     let mut bm_rwlock = Vec::new();
+    let mut bm_atomic = Vec::new();
 
     for i in 0..N {
         if i > 0 {
             bm_mutex.push(run(&|| with_mutex(num_reader, num_writer)));
             bm_rwlock.push(run(&|| with_rwlock(num_reader, num_writer)));
+            bm_atomic.push(run(&|| with_atomic(num_reader, num_writer)));
         }
     }
 
     print_result("mutex", &bm_mutex);
     print_result("rwlock", &bm_rwlock);
+    print_result("atomic", &bm_atomic);
     println!("");
 }
 

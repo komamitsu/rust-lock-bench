@@ -4,16 +4,16 @@ use std::sync::atomic::{Ordering, AtomicUsize};
 
 const N: i32 = 10000;
 
-pub fn with_mutex(num_reader: i32, num_writer: i32) {
+pub fn with<T, G>(num_reader: i32, num_writer: i32, gen: G, write: fn(&Arc<T>), read: fn(&Arc<T>))
+    where T: Sync + Send + 'static, G: Fn() -> T {
     let mut ths = Vec::new();
-    let counter = Arc::new(Mutex::new(0));
+    let counter = Arc::new(gen());
 
     for _ in 0..num_writer {
         let counter = counter.clone();
         ths.push(thread::spawn(move || {
             for _ in 0..N {
-                let mut counter_ref = counter.lock().unwrap();
-                *counter_ref += 1;
+                write(&counter)
             }
         }));
     }
@@ -22,7 +22,7 @@ pub fn with_mutex(num_reader: i32, num_writer: i32) {
         let counter = counter.clone();
         ths.push(thread::spawn(move || {
             for _ in 0..N {
-                let _ = counter.lock().unwrap();
+                read(&counter)
             }
         }));
     }
@@ -30,60 +30,43 @@ pub fn with_mutex(num_reader: i32, num_writer: i32) {
     for th in ths {
         th.join().unwrap();
     }
+}
+
+pub fn with_mutex(num_reader: i32, num_writer: i32) {
+    fn write(counter: &Arc<Mutex<i32>>) {
+         let mut counter_ref = counter.lock().unwrap();
+         *counter_ref += 1;
+    }
+
+    fn read(counter: &Arc<Mutex<i32>>) {
+         let _ = counter.lock().unwrap();
+    }
+
+    with(num_reader, num_writer, || Mutex::new(0), write, read);
 }
 
 pub fn with_rwlock(num_reader: i32, num_writer: i32) {
-    let mut ths = Vec::new();
-    let counter = Arc::new(RwLock::new(0));
+    fn write(counter: &Arc<RwLock<i32>>) {
+        let mut counter_ref = counter.write().unwrap();
+        *counter_ref += 1;
+    }
 
-    for _ in 0..num_writer {
-        let counter = counter.clone();
-        ths.push(thread::spawn(move || {
-            for _ in 0..N {
-                let mut counter_ref = counter.write().unwrap();
-                *counter_ref += 1;
-            }
-        }));
+    fn read(counter: &Arc<RwLock<i32>>) {
+        let _ = counter.read().unwrap();
     }
-    
-    for _ in 0..num_reader {
-        let counter = counter.clone();
-        ths.push(thread::spawn(move || {
-            for _ in 0..N {
-                let _ = counter.read().unwrap();
-            }
-        }));
-    }
-    
-    for th in ths {
-        th.join().unwrap();
-    }
+
+    with(num_reader, num_writer, || RwLock::new(0), write, read);
 }
 
 pub fn with_atomic(num_reader: i32, num_writer: i32) {
-    let mut ths = Vec::new();
-    let counter = Arc::new(AtomicUsize::new(0));
+    fn write(counter: &Arc<AtomicUsize>) {
+        counter.fetch_add(1, Ordering::SeqCst);
+    }
 
-    for _ in 0..num_writer {
-        let counter = counter.clone();
-        ths.push(thread::spawn(move || {
-            for _ in 0..N {
-                counter.fetch_add(1, Ordering::SeqCst);
-            }
-        }));
+    fn read(counter: &Arc<AtomicUsize>) {
+        let _ = counter.load(Ordering::SeqCst);
     }
-    
-    for _ in 0..num_reader {
-        let counter = counter.clone();
-        ths.push(thread::spawn(move || {
-            for _ in 0..N {
-                let _ = counter.load(Ordering::SeqCst);
-            }
-        }));
-    }
-    
-    for th in ths {
-        th.join().unwrap();
-    }
+
+    with(num_reader, num_writer, || AtomicUsize::new(0), write, read);
 }
 

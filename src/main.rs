@@ -8,14 +8,14 @@ use time::{PreciseTime};
 
 use lock_bench::*;
 
-const N : i32 = 8;
+const N : i32 = 32;
 
 fn run(f: &Fn()) -> f64 {
     let start = PreciseTime::now();
     f();
     let end = PreciseTime::now();
     let d = start.to(end);
-    d.num_milliseconds() as f64
+    d.num_microseconds().expect("overflowed 2^63 microseconds") as f64
 }
 
 fn print_result(label: &str, result: &Vec<f64>) {

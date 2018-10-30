@@ -28,6 +28,7 @@ pub fn iter(num_reader: usize, num_writer: usize) {
 
     let mut bm_mutex = Vec::new();
     let mut bm_rwlock = Vec::new();
+    let mut bm_parking_rwlock = Vec::new();
     let mut bm_atomic_seq_cst = Vec::new();
     let mut bm_atomic_relaxed = Vec::new();
     let mut bm_unsynchronized = Vec::new();
@@ -36,6 +37,7 @@ pub fn iter(num_reader: usize, num_writer: usize) {
         if i > 0 {
             bm_mutex.push(run(&|| with_mutex(num_reader, num_writer)));
             bm_rwlock.push(run(&|| with_rwlock(num_reader, num_writer)));
+            bm_parking_rwlock.push(run(&|| with_parking_rwlock(num_reader, num_writer)));
             bm_atomic_seq_cst.push(run(&|| with_atomic_seq_cst(num_reader, num_writer)));
             bm_atomic_relaxed.push(run(&|| with_atomic_relaxed(num_reader, num_writer)));
             bm_unsynchronized.push(run(&|| with_unsynchronized(num_reader, num_writer)));
@@ -44,6 +46,7 @@ pub fn iter(num_reader: usize, num_writer: usize) {
 
     print_result("mutex", &bm_mutex);
     print_result("rwlock", &bm_rwlock);
+    print_result("prwlock", &bm_rwlock);
     print_result("seq_cst", &bm_atomic_seq_cst);
     print_result("relaxed", &bm_atomic_relaxed);
     print_result("unsync", &bm_unsynchronized);
@@ -56,4 +59,3 @@ pub fn main() {
         iter(total - num_writer, *num_writer);
     }
 }
-

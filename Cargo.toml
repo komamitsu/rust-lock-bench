@@ -9,3 +9,4 @@ name = "lock_bench"
 [dependencies]
 time = "0.1"
 statrs = "0.5"
+parking_lot = "0.6"

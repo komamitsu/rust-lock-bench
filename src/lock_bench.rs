@@ -1,6 +1,10 @@
 use std::thread;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex};
 use std::sync::atomic::{Ordering, AtomicUsize};
+
+use std::sync::RwLock as StdRwLock;
+extern crate parking_lot;
+use parking_lot::RwLock as ParkingRwLock;
 
 const N: usize = 10000;
 
@@ -46,16 +50,30 @@ pub fn with_mutex(num_reader: usize, num_writer: usize) {
 }
 
 pub fn with_rwlock(num_reader: usize, num_writer: usize) {
-    fn write(counter: &Arc<RwLock<usize>>) {
+    fn write(counter: &Arc<StdRwLock<usize>>) {
         let mut counter_ref = counter.write().unwrap();
         *counter_ref += 1;
     }
 
-    fn read(counter: &Arc<RwLock<usize>>) {
+    fn read(counter: &Arc<StdRwLock<usize>>) {
         let _ = counter.read().unwrap();
     }
 
-    with(num_reader, num_writer, || RwLock::new(0), write, read);
+    with(num_reader, num_writer, || StdRwLock::new(0), write, read);
+}
+
+pub fn with_parking_rwlock(num_reader: usize, num_writer: usize) {
+    ;
+    fn write(counter: &Arc<ParkingRwLock<usize>>) {
+        let mut counter_ref = counter.write();
+        *counter_ref += 1;
+    }
+
+    fn read(counter: &Arc<ParkingRwLock<usize>>) {
+        let _ = counter.read();
+    }
+
+    with(num_reader, num_writer, || ParkingRwLock::new(0), write, read);
 }
 
 pub fn with_atomic_seq_cst(num_reader: usize, num_writer: usize) {
